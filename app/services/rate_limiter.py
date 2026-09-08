@@ -1,6 +1,5 @@
 """Redis-backed distributed sliding-window rate limiter service."""
 
-import logging
 import time
 import uuid
 from dataclasses import dataclass
@@ -11,13 +10,15 @@ from redis.exceptions import RedisError
 
 from app.core.config import settings
 from app.core.exceptions import ServiceUnavailableError
+from app.core.logging import get_logger
+from app.core.metrics import metrics
 
 if TYPE_CHECKING:
     RedisClient = Redis[str]
 else:
     RedisClient = Redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Atomic sliding-window rate limiter Lua script using Redis server TIME
 SLIDING_WINDOW_LUA_SCRIPT = """
@@ -140,6 +141,23 @@ class RateLimiterService:
             reset_epoch = int(result[2])
             retry_after = int(result[3])
 
+            metrics.record_redis_op("rate_limit_eval", "success")
+
+            if not allowed_flag:
+                metrics.record_rate_limit_rejection()
+                logger.warning(
+                    "rate_limit_exceeded",
+                    limit=max_limit,
+                    remaining=0,
+                    retry_after=retry_after,
+                )
+            else:
+                logger.debug(
+                    "rate_limit_admitted",
+                    limit=max_limit,
+                    remaining=remaining,
+                )
+
             return RateLimitResult(
                 allowed=allowed_flag,
                 limit=max_limit,
@@ -149,11 +167,12 @@ class RateLimiterService:
             )
 
         except (RedisError, TimeoutError, OSError) as exc:
+            metrics.record_redis_op("rate_limit_eval", "error")
             logger.error(
-                "Redis rate limiter encounter error (fail_open=%s): %s",
-                self.fail_open,
-                exc,
-                exc_info=True,
+                "redis_rate_limiter_failure",
+                fail_open=self.fail_open,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
             )
             if self.fail_open:
                 # Permissive fallback if configured

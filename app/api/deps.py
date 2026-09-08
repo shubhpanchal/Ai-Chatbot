@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.exceptions import RateLimitExceededError, UnauthorizedError
+from app.core.logging import get_logger
 from app.core.security import hash_api_key
 from app.db.redis import get_redis_client
 from app.db.session import get_async_session
@@ -26,6 +27,8 @@ from app.services.conversation import ConversationService
 from app.services.cost import CostCalculatorService
 from app.services.idempotency import IdempotencyService
 from app.services.rate_limiter import RateLimiterService, RateLimitResult
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     RedisClient = Redis[str]
@@ -60,17 +63,24 @@ async def get_current_api_key(
 ) -> APIKey:
     """Validate Bearer API key via HMAC-SHA-256 hash lookup and return authenticated tenant."""
     if credentials is None or not credentials.credentials:
+        logger.warning("auth_failed_missing_credentials")
         raise UnauthorizedError("Missing or invalid Authorization header.")
 
     raw_key = credentials.credentials.strip()
     if not raw_key:
+        logger.warning("auth_failed_empty_token")
         raise UnauthorizedError("Missing or invalid Authorization header.")
 
     key_hash = hash_api_key(raw_key, settings.api_key_secret)
     api_key_repo = APIKeyRepository(session)
     api_key = await api_key_repo.get_by_key_hash(key_hash)
 
-    if api_key is None or not api_key.is_active:
+    if api_key is None:
+        logger.warning("auth_failed_key_not_found")
+        raise UnauthorizedError("Invalid or inactive API key.")
+
+    if not api_key.is_active:
+        logger.warning("auth_failed_key_deactivated")
         raise UnauthorizedError("Invalid or inactive API key.")
 
     return api_key

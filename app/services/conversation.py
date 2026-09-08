@@ -3,6 +3,8 @@
 import uuid
 
 from app.core.exceptions import ConversationNotFoundError, ValidationError
+from app.core.logging import get_logger
+from app.core.metrics import metrics
 from app.repositories.conversation import ConversationRepository
 from app.repositories.message import MessageRepository
 from app.schemas.conversation import (
@@ -13,6 +15,8 @@ from app.schemas.conversation import (
     UsageSummaryResponse,
 )
 from app.schemas.message import MessageResponse
+
+logger = get_logger(__name__)
 
 
 class ConversationService:
@@ -41,6 +45,9 @@ class ConversationService:
             title=title,
             system_prompt=data.system_prompt.strip() if data.system_prompt else None,
         )
+        metrics.record_conversation_op("create")
+        metrics.record_db_op("create_conversation", "success")
+        logger.info("conversation_created", conversation_id=str(conversation.id))
         return ConversationResponse.model_validate(conversation)
 
     async def list_conversations(
@@ -60,6 +67,8 @@ class ConversationService:
             page=page,
             page_size=page_size,
         )
+        metrics.record_conversation_op("list")
+        metrics.record_db_op("list_conversations", "success")
 
         response_items = [ConversationResponse.model_validate(item) for item in items]
         return PaginatedConversationsResponse.create(
@@ -85,10 +94,13 @@ class ConversationService:
             include_deleted=False,
         )
         if conversation is None:
+            metrics.record_db_op("get_conversation", "not_found")
             raise ConversationNotFoundError(f"Conversation with ID '{conversation_id}' not found.")
 
         messages = await self.message_repo.list_by_conversation(conversation_id)
         stats = await self.conversation_repo.get_usage_stats(conversation_id)
+        metrics.record_conversation_op("get")
+        metrics.record_db_op("get_conversation", "success")
 
         return ConversationDetailResponse(
             id=conversation.id,
@@ -115,4 +127,9 @@ class ConversationService:
             api_key_id=api_key_id,
         )
         if not deleted:
+            metrics.record_db_op("delete_conversation", "not_found")
             raise ConversationNotFoundError(f"Conversation with ID '{conversation_id}' not found.")
+
+        metrics.record_conversation_op("delete")
+        metrics.record_db_op("delete_conversation", "success")
+        logger.info("conversation_deleted", conversation_id=str(conversation_id))

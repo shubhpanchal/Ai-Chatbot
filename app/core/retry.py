@@ -1,7 +1,6 @@
 """Resilience and retry utilities with exponential backoff and full jitter."""
 
 import asyncio
-import logging
 import random
 from collections.abc import Callable, Coroutine
 from typing import Any, TypeVar
@@ -9,7 +8,10 @@ from typing import Any, TypeVar
 import httpx
 import openai
 
-logger = logging.getLogger(__name__)
+from app.core.logging import get_logger
+from app.core.metrics import metrics
+
+logger = get_logger(__name__)
 
 T = TypeVar("T")
 
@@ -92,11 +94,12 @@ async def with_retry(
             is_transient = is_transient_fn(exc)
             if not is_transient or attempt >= max_attempts:
                 logger.warning(
-                    "Operation failed permanently on attempt %d/%d (transient=%s): %s",
-                    attempt,
-                    max_attempts,
-                    is_transient,
-                    str(exc),
+                    "retry_attempt_failed_permanent",
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    is_transient=is_transient,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
                 )
                 raise
 
@@ -106,12 +109,13 @@ async def with_retry(
                 max_delay=max_delay,
                 jitter=True,
             )
+            metrics.record_llm_retry(provider="openai", model="general")
             logger.info(
-                "Transient failure on attempt %d/%d (%s). Retrying in %.3fs...",
-                attempt,
-                max_attempts,
-                type(exc).__name__,
-                delay,
+                "retry_transient_failure_scheduled",
+                attempt=attempt,
+                max_attempts=max_attempts,
+                error_type=type(exc).__name__,
+                delay_seconds=round(delay, 3),
             )
             await asyncio.sleep(delay)
 
