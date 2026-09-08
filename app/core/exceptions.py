@@ -12,12 +12,14 @@ class AppException(Exception):
         code: str = "INTERNAL_SERVER_ERROR",
         status_code: int = 500,
         details: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
         self.code = code
         self.status_code = status_code
         self.details = details
+        self.headers = headers
 
 
 class UnauthorizedError(AppException):
@@ -108,12 +110,14 @@ class RateLimitExceededError(AppException):
         self,
         message: str = "Rate limit exceeded. Please retry later.",
         details: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> None:
         super().__init__(
             message=message,
             code="RATE_LIMIT_EXCEEDED",
             status_code=429,
             details=details,
+            headers=headers,
         )
 
 

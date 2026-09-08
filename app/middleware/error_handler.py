@@ -26,6 +26,7 @@ def _format_error_response(
     status_code: int,
     request_id: str | None = None,
     details: Any = None,
+    headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     """Format and return a standard JSON error response."""
     return JSONResponse(
@@ -38,6 +39,7 @@ def _format_error_response(
                 "details": details,
             }
         },
+        headers=headers,
     )
 
 
@@ -50,6 +52,7 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
         status_code=exc.status_code,
         request_id=request_id,
         details=exc.details,
+        headers=getattr(exc, "headers", None),
     )
 
 

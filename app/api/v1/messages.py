@@ -5,12 +5,16 @@ import uuid
 from fastapi import APIRouter, Depends, Header, Request, status
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import get_chat_service, get_current_api_key
+from app.api.deps import check_rate_limit, get_chat_service, get_current_api_key
 from app.models.api_key import APIKey
 from app.schemas.message import MessageCreate, MessageResponse
 from app.services.chat import ChatService
 
-router = APIRouter(prefix="/conversations/{conversation_id}/messages", tags=["Messages"])
+router = APIRouter(
+    prefix="/conversations/{conversation_id}/messages",
+    tags=["Messages"],
+    dependencies=[Depends(check_rate_limit)],
+)
 
 
 @router.post(

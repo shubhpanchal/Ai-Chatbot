@@ -3,13 +3,13 @@
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING
 
-from fastapi import Depends
+from fastapi import Depends, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import RateLimitExceededError, UnauthorizedError
 from app.core.security import hash_api_key
 from app.db.redis import get_redis_client
 from app.db.session import get_async_session
@@ -25,6 +25,7 @@ from app.services.chat import ChatService
 from app.services.conversation import ConversationService
 from app.services.cost import CostCalculatorService
 from app.services.idempotency import IdempotencyService
+from app.services.rate_limiter import RateLimiterService, RateLimitResult
 
 if TYPE_CHECKING:
     RedisClient = Redis[str]
@@ -122,3 +123,43 @@ def get_chat_service(
         cost_calculator=cost_calc,
         idempotency_service=idempotency,
     )
+
+
+def get_rate_limiter(
+    redis: RedisClient = Depends(get_redis),
+) -> RateLimiterService:
+    """Provide RateLimiterService instance."""
+    return RateLimiterService(redis)
+
+
+async def check_rate_limit(
+    response: Response,
+    current_key: APIKey = Depends(get_current_api_key),
+    rate_limiter: RateLimiterService = Depends(get_rate_limiter),
+) -> RateLimitResult:
+    """Enforce sliding-window rate limit per tenant API key and inject standard rate limit headers."""
+    result = await rate_limiter.check_rate_limit(api_key_id=current_key.id)
+
+    # Attach standard rate limit headers to response
+    response.headers["X-RateLimit-Limit"] = str(result.limit)
+    response.headers["X-RateLimit-Remaining"] = str(result.remaining)
+    response.headers["X-RateLimit-Reset"] = str(result.reset_epoch)
+
+    if not result.allowed:
+        headers = {
+            "Retry-After": str(result.retry_after),
+            "X-RateLimit-Limit": str(result.limit),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": str(result.reset_epoch),
+        }
+        raise RateLimitExceededError(
+            message="Rate limit exceeded. Please retry later.",
+            details={
+                "limit": result.limit,
+                "window_seconds": settings.rate_limit_window_seconds,
+                "retry_after": result.retry_after,
+            },
+            headers=headers,
+        )
+
+    return result
