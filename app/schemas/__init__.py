@@ -9,7 +9,7 @@ from app.schemas.conversation import (
 )
 from app.schemas.error import ErrorDetail, ErrorResponse
 from app.schemas.health import HealthResponse
-from app.schemas.message import MessageResponse
+from app.schemas.message import MessageCreate, MessageResponse, MessageUsage
 
 __all__ = [
     "ConversationCreate",
@@ -18,7 +18,9 @@ __all__ = [
     "ErrorDetail",
     "ErrorResponse",
     "HealthResponse",
+    "MessageCreate",
     "MessageResponse",
+    "MessageUsage",
     "PaginatedConversationsResponse",
     "UsageSummaryResponse",
 ]

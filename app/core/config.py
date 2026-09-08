@@ -68,8 +68,9 @@ class Settings(BaseSettings):
     )
 
     # -------------------------------------------------------------------------
-    # LLM Provider Configuration (OpenAI)
+    # LLM Provider Configuration
     # -------------------------------------------------------------------------
+    llm_provider: str = Field(default="openai", alias="LLM_PROVIDER")
     openai_api_key: str = Field(default="sk-test-key-placeholder", alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
     openai_temperature: float = Field(default=0.7, alias="OPENAI_TEMPERATURE")
