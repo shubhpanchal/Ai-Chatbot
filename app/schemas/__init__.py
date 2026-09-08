@@ -9,7 +9,13 @@ from app.schemas.conversation import (
 )
 from app.schemas.error import ErrorDetail, ErrorResponse
 from app.schemas.health import HealthResponse
-from app.schemas.message import MessageCreate, MessageResponse, MessageUsage
+from app.schemas.message import (
+    MessageCreate,
+    MessageResponse,
+    MessageUsage,
+    StreamDoneEvent,
+    StreamTokenEvent,
+)
 
 __all__ = [
     "ConversationCreate",
@@ -22,5 +28,7 @@ __all__ = [
     "MessageResponse",
     "MessageUsage",
     "PaginatedConversationsResponse",
+    "StreamDoneEvent",
+    "StreamTokenEvent",
     "UsageSummaryResponse",
 ]

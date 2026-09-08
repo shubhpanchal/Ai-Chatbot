@@ -1,6 +1,7 @@
 """Abstract base classes and data contracts for LLM providers."""
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
 
@@ -24,6 +25,18 @@ class LLMResponse:
     latency_ms: int
 
 
+@dataclass(frozen=True)
+class LLMStreamChunk:
+    """Represents an incremental chunk or metadata in a streaming LLM response."""
+
+    delta: str
+    index: int = 0
+    finish_reason: str | None = None
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    total_tokens: int | None = None
+
+
 class LLMProvider(ABC):
     """Abstract interface for large language model providers."""
 
@@ -36,4 +49,15 @@ class LLMProvider(ABC):
         max_tokens: int | None = None,
     ) -> LLMResponse:
         """Execute a synchronous generation call given a prompt context."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def generate_stream(
+        self,
+        messages: list[LLMMessage],
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> AsyncIterator[LLMStreamChunk]:
+        """Execute a streaming generation call, yielding tokens/metadata incrementally."""
         raise NotImplementedError

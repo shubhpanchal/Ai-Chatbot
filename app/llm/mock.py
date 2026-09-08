@@ -2,9 +2,9 @@
 
 import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 
-from app.llm.base import LLMMessage, LLMProvider, LLMResponse
+from app.llm.base import LLMMessage, LLMProvider, LLMResponse, LLMStreamChunk
 
 
 class MockLLMProvider(LLMProvider):
@@ -32,6 +32,7 @@ class MockLLMProvider(LLMProvider):
         self.call_count: int = 0
         self.last_messages: list[LLMMessage] = []
         self._current_failure_count: int = 0
+        self.stream_chunks_yielded: int = 0
 
     async def generate(
         self,
@@ -79,4 +80,59 @@ class MockLLMProvider(LLMProvider):
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
             latency_ms=elapsed_ms,
+        )
+
+    async def generate_stream(
+        self,
+        messages: list[LLMMessage],
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> AsyncIterator[LLMStreamChunk]:
+        """Simulate token-by-token streaming with latency and failure injection."""
+        self.call_count += 1
+        self.last_messages = messages
+
+        # Simulate transient failure injection
+        if self._current_failure_count < self.transient_failures_before_success:
+            self._current_failure_count += 1
+            if self.simulated_error:
+                raise self.simulated_error
+            raise TimeoutError("Simulated transient upstream timeout.")
+
+        # Simulate permanent error injection
+        if self.simulated_error and self.transient_failures_before_success == 0:
+            raise self.simulated_error
+
+        # Determine full content to stream
+        if self.response_generator:
+            content = self.response_generator(messages)
+        else:
+            last_prompt = messages[-1].content if messages else ""
+            content = f"{self.default_response} (Prompt was: '{last_prompt}')"
+
+        words = content.split(" ")
+        prompt_tokens = len(messages) * self.prompt_tokens_per_message
+
+        for idx, word in enumerate(words):
+            if self.simulated_latency_ms > 0:
+                await asyncio.sleep(self.simulated_latency_ms / 1000.0)
+            token_text = word if idx == 0 else " " + word
+            self.stream_chunks_yielded += 1
+            yield LLMStreamChunk(
+                delta=token_text,
+                index=idx,
+                finish_reason=None,
+            )
+
+        completion_tokens = max(1, len(words)) * 2
+        total_tokens = prompt_tokens + completion_tokens
+
+        yield LLMStreamChunk(
+            delta="",
+            index=len(words),
+            finish_reason="stop",
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
         )
