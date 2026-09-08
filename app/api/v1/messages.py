@@ -27,6 +27,7 @@ router = APIRouter(
 async def send_message(
     conversation_id: uuid.UUID,
     payload: MessageCreate,
+    request: Request,
     idempotency_key: str | None = Header(
         default=None,
         alias="Idempotency-Key",
@@ -36,11 +37,12 @@ async def send_message(
     chat_service: ChatService = Depends(get_chat_service),
 ) -> MessageResponse:
     """Execute synchronous conversational turn with LLM and return complete assistant reply."""
+    resolved_idemp_key = idempotency_key or request.headers.get("X-Idempotency-Key")
     return await chat_service.send_message(
         conversation_id=conversation_id,
         api_key_id=current_key.id,
         content=payload.content,
-        idempotency_key=idempotency_key,
+        idempotency_key=resolved_idemp_key,
     )
 
 
@@ -64,11 +66,12 @@ async def send_message_stream(
     chat_service: ChatService = Depends(get_chat_service),
 ) -> StreamingResponse:
     """Execute streaming conversational turn with LLM and emit SSE token/done events."""
+    resolved_idemp_key = idempotency_key or request.headers.get("X-Idempotency-Key")
     _, context_messages, cached = await chat_service.prepare_stream_turn(
         conversation_id=conversation_id,
         api_key_id=current_key.id,
         content=payload.content,
-        idempotency_key=idempotency_key,
+        idempotency_key=resolved_idemp_key,
     )
 
     generator = chat_service.stream_message(
@@ -76,7 +79,7 @@ async def send_message_stream(
         api_key_id=current_key.id,
         context_messages=context_messages,
         cached_response=cached,
-        idempotency_key=idempotency_key,
+        idempotency_key=resolved_idemp_key,
         is_disconnected=request.is_disconnected,
     )
 

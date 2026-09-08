@@ -1,0 +1,153 @@
+{
+  "timestamp": "2026-09-08T08:16:19Z",
+  "total_cases": 10,
+  "passed_cases": 10,
+  "failed_cases": 0,
+  "pass_rate_pct": 100.0,
+  "results": [
+    {
+      "id": "EVAL-001",
+      "category": "basic_qa",
+      "title": "Basic Technical QA",
+      "status": "PASSED",
+      "turns_count": 1,
+      "total_tokens": 56,
+      "total_cost_usd": 9.2e-05,
+      "turn_latencies_ms": [
+        110.94
+      ],
+      "total_latency_ms": 188.37,
+      "history_length": 2
+    },
+    {
+      "id": "EVAL-002",
+      "category": "multi_turn_context",
+      "title": "Multi-turn Memory and Context Retention",
+      "status": "PASSED",
+      "turns_count": 2,
+      "total_tokens": 134,
+      "total_cost_usd": 0.000208,
+      "turn_latencies_ms": [
+        108.75,
+        59.8
+      ],
+      "total_latency_ms": 259.43,
+      "history_length": 4
+    },
+    {
+      "id": "EVAL-003",
+      "category": "contextual_followup",
+      "title": "Contextual Entity and Pronoun Follow-up",
+      "status": "PASSED",
+      "turns_count": 2,
+      "total_tokens": 130,
+      "total_cost_usd": 0.0002,
+      "turn_latencies_ms": [
+        110.91,
+        65.73
+      ],
+      "total_latency_ms": 275.16,
+      "history_length": 4
+    },
+    {
+      "id": "EVAL-004",
+      "category": "system_prompt_adherence",
+      "title": "Custom System Prompt Constraint Adherence",
+      "status": "PASSED",
+      "turns_count": 1,
+      "total_tokens": 50,
+      "total_cost_usd": 8e-05,
+      "turn_latencies_ms": [
+        121.89
+      ],
+      "total_latency_ms": 212.92,
+      "history_length": 2
+    },
+    {
+      "id": "EVAL-005",
+      "category": "long_context_handling",
+      "title": "Long Context Assembly and Sliding Window",
+      "status": "PASSED",
+      "turns_count": 6,
+      "total_tokens": 656,
+      "total_cost_usd": 0.000892,
+      "turn_latencies_ms": [
+        101.67,
+        61.99,
+        62.83,
+        64.59,
+        64.76,
+        67.64
+      ],
+      "total_latency_ms": 519.93,
+      "history_length": 12
+    },
+    {
+      "id": "EVAL-006",
+      "category": "ambiguous_requests",
+      "title": "Ambiguous Request Handling",
+      "status": "PASSED",
+      "turns_count": 1,
+      "total_tokens": 52,
+      "total_cost_usd": 8.4e-05,
+      "turn_latencies_ms": [
+        105.36
+      ],
+      "total_latency_ms": 194.75,
+      "history_length": 2
+    },
+    {
+      "id": "EVAL-007",
+      "category": "clarification_scenarios",
+      "title": "Clarification and Follow-up Flow",
+      "status": "PASSED",
+      "turns_count": 2,
+      "total_tokens": 142,
+      "total_cost_usd": 0.000224,
+      "turn_latencies_ms": [
+        110.13,
+        64.71
+      ],
+      "total_latency_ms": 282.14,
+      "history_length": 4
+    },
+    {
+      "id": "EVAL-008",
+      "category": "long_user_message",
+      "title": "Long User Input Processing",
+      "status": "PASSED",
+      "turns_count": 1,
+      "total_tokens": 162,
+      "total_cost_usd": 0.000304,
+      "turn_latencies_ms": [
+        118.65
+      ],
+      "total_latency_ms": 217.15,
+      "history_length": 2
+    },
+    {
+      "id": "EVAL-009",
+      "category": "multi_topic_conversations",
+      "title": "Multi-Topic Subject Switching",
+      "status": "PASSED",
+      "turns_count": 2,
+      "total_tokens": 134,
+      "total_cost_usd": 0.000208,
+      "turn_latencies_ms": [
+        107.68,
+        63.44
+      ],
+      "total_latency_ms": 264.98,
+      "history_length": 4
+    },
+    {
+      "id": "EVAL-010",
+      "category": "validation_error_handling",
+      "title": "Contract and Validation Rejection",
+      "status": "PASSED",
+      "status_code": 422,
+      "expected_error": "VALIDATION_ERROR",
+      "total_latency_ms": 129.9
+    }
+  ]
+}

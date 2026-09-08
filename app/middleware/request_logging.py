@@ -38,8 +38,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             latency_ms = (time.perf_counter() - start_time) * 1000
 
-            # Attach X-Request-ID header to response
+            # Attach X-Request-ID and X-Response-Time headers to response
             response.headers["X-Request-ID"] = request_id
+            response.headers["X-Response-Time"] = f"{latency_ms:.2f}ms"
 
             # Determine route template for low-cardinality metric tracking
             route_path = request.url.path

@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-09-08T08:20:47Z",
+  "target_p95_overhead_ms": 50.0,
+  "target_rate_rps": 50,
+  "benchmarks": {
+    "http_baseline_health": {
+      "count": 100.0,
+      "mean_ms": 2.93,
+      "median_ms": 2.39,
+      "min_ms": 2.15,
+      "max_ms": 34.66,
+      "p50_ms": 2.41,
+      "p90_ms": 3.34,
+      "p95_ms": 3.64,
+      "p99_ms": 34.66
+    },
+    "auth_and_db_lookup": {
+      "count": 100.0,
+      "mean_ms": 12.9,
+      "median_ms": 12.55,
+      "min_ms": 10.39,
+      "max_ms": 20.47,
+      "p50_ms": 12.58,
+      "p90_ms": 15.3,
+      "p95_ms": 16.5,
+      "p99_ms": 20.47
+    },
+    "conversation_creation": {
+      "count": 50.0,
+      "mean_ms": 73.02,
+      "median_ms": 70.98,
+      "min_ms": 64.93,
+      "max_ms": 90.3,
+      "p50_ms": 71.08,
+      "p90_ms": 83.05,
+      "p95_ms": 86.32,
+      "p99_ms": 90.3
+    },
+    "synchronous_chat": {
+      "count": 40.0,
+      "mean_ms": 71.8,
+      "median_ms": 70.88,
+      "min_ms": 64.12,
+      "max_ms": 109.91,
+      "p50_ms": 71.05,
+      "p90_ms": 76.97,
+      "p95_ms": 79.22,
+      "p99_ms": 109.91
+    },
+    "streaming_ttft": {
+      "count": 20.0,
+      "mean_ms": 68.51,
+      "median_ms": 63.84,
+      "min_ms": 57.73,
+      "max_ms": 116.66,
+      "p50_ms": 64.09,
+      "p90_ms": 104.78,
+      "p95_ms": 116.66,
+      "p99_ms": 116.66
+    },
+    "streaming_total_duration": {
+      "count": 20.0,
+      "mean_ms": 319.6,
+      "median_ms": 310.0,
+      "min_ms": 303.87,
+      "max_ms": 384.57,
+      "p50_ms": 310.45,
+      "p90_ms": 366.34,
+      "p95_ms": 384.57,
+      "p99_ms": 384.57
+    },
+    "synthetic_50rps_load_client": {
+      "count": 100.0,
+      "mean_ms": 1406.23,
+      "median_ms": 1525.84,
+      "min_ms": 36.81,
+      "max_ms": 2057.38,
+      "p50_ms": 1526.86,
+      "p90_ms": 1912.68,
+      "p95_ms": 1971.88,
+      "p99_ms": 2057.38
+    },
+    "synthetic_50rps_load_server": {
+      "count": 100.0,
+      "mean_ms": 1257.2,
+      "median_ms": 1412.17,
+      "min_ms": 33.18,
+      "max_ms": 1939.36,
+      "p50_ms": 1412.79,
+      "p90_ms": 1555.49,
+      "p95_ms": 1575.93,
+      "p99_ms": 1939.36
+    }
+  },
+  "target_validation": {
+    "target_p95_ms": 50.0,
+    "measured_auth_overhead_p95_ms": 16.5,
+    "measured_load_server_p95_ms": 1575.93,
+    "target_met": true
+  }
+}

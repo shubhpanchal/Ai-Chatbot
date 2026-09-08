@@ -1,0 +1,176 @@
+[
+  {
+    "id": "EVAL-001",
+    "category": "basic_qa",
+    "title": "Basic Technical QA",
+    "system_prompt": "You are a helpful and concise AI assistant.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is the difference between concurrency and parallelism?"
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "min_tokens": 10,
+      "must_contain_keywords": ["concurrency", "parallelism"]
+    }
+  },
+  {
+    "id": "EVAL-002",
+    "category": "multi_turn_context",
+    "title": "Multi-turn Memory and Context Retention",
+    "system_prompt": "You are a helpful assistant with accurate memory.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "My favorite programming language is Rust."
+      },
+      {
+        "role": "user",
+        "content": "What is my favorite programming language that I just told you?"
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "min_tokens": 5,
+      "history_length": 4
+    }
+  },
+  {
+    "id": "EVAL-003",
+    "category": "contextual_followup",
+    "title": "Contextual Entity and Pronoun Follow-up",
+    "system_prompt": "You are a concise AI tutor.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Tell me about the Eiffel Tower."
+      },
+      {
+        "role": "user",
+        "content": "Where is it located and when was it built?"
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "history_length": 4
+    }
+  },
+  {
+    "id": "EVAL-004",
+    "category": "system_prompt_adherence",
+    "title": "Custom System Prompt Constraint Adherence",
+    "system_prompt": "You are a pirate captain. Respond to all questions using pirate vernacular.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "How is the weather today?"
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "min_tokens": 5
+    }
+  },
+  {
+    "id": "EVAL-005",
+    "category": "long_context_handling",
+    "title": "Long Context Assembly and Sliding Window",
+    "system_prompt": "You are an analytical assistant.",
+    "messages": [
+      { "role": "user", "content": "Fact 1: The speed of light is ~300,000 km/s." },
+      { "role": "user", "content": "Fact 2: Sound travels at ~343 m/s in air." },
+      { "role": "user", "content": "Fact 3: Water boils at 100 degrees Celsius at 1 atm." },
+      { "role": "user", "content": "Fact 4: The Earth orbits the Sun in approximately 365.25 days." },
+      { "role": "user", "content": "Fact 5: Mitochondria is the powerhouse of the cell." },
+      { "role": "user", "content": "Synthesize all 5 facts above into a numbered summary." }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "history_length": 12
+    }
+  },
+  {
+    "id": "EVAL-006",
+    "category": "ambiguous_requests",
+    "title": "Ambiguous Request Handling",
+    "system_prompt": "You are a helpful software consultant.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "My system is slow. Fix it."
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "min_tokens": 10
+    }
+  },
+  {
+    "id": "EVAL-007",
+    "category": "clarification_scenarios",
+    "title": "Clarification and Follow-up Flow",
+    "system_prompt": "You are a debugging assistant.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "I am getting an error 500 in my web server."
+      },
+      {
+        "role": "user",
+        "content": "The stack trace indicates a PostgreSQL connection timeout on port 5432."
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "history_length": 4
+    }
+  },
+  {
+    "id": "EVAL-008",
+    "category": "long_user_message",
+    "title": "Long User Input Processing",
+    "system_prompt": "You are an executive summarizer.",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Here is a detailed system architecture description: PostgreSQL is used as the relational system of record storing tenants, conversations, messages, and llm_requests. Redis 7 is used as the in-memory cache for sliding-window distributed rate limiting and idempotency caching. The API layer is implemented with FastAPI in Python 3.12, utilizing SQLAlchemy 2.0 with asyncpg for non-blocking I/O. Please summarize the key technologies."
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "min_tokens": 10
+    }
+  },
+  {
+    "id": "EVAL-009",
+    "category": "multi_topic_conversations",
+    "title": "Multi-Topic Subject Switching",
+    "system_prompt": "You are a versatile conversational AI.",
+    "messages": [
+      { "role": "user", "content": "How do you calculate the area of a circle?" },
+      { "role": "user", "content": "Now switch topics: who composed the Moonlight Sonata?" }
+    ],
+    "expected_behavior": {
+      "status_code": 200,
+      "history_length": 4
+    }
+  },
+  {
+    "id": "EVAL-010",
+    "category": "validation_error_handling",
+    "title": "Contract and Validation Rejection",
+    "system_prompt": "You are a strict validator.",
+    "messages": [
+      {
+        "role": "user",
+        "content": ""
+      }
+    ],
+    "expected_behavior": {
+      "status_code": 422,
+      "error_code": "VALIDATION_ERROR"
+    }
+  }
+]

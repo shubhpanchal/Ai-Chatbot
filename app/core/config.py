@@ -56,6 +56,7 @@ class Settings(BaseSettings):
         default="dev-secret-pepper-key-minimum-32-chars-change-in-production",
         alias="API_KEY_SECRET",
     )
+    cors_allow_origins: list[str] = Field(default_factory=lambda: ["*"], alias="CORS_ALLOW_ORIGINS")
 
     # -------------------------------------------------------------------------
     # Rate Limiting & Idempotency
