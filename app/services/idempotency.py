@@ -1,7 +1,6 @@
 """Distributed idempotency service backed by Redis."""
 
 import json
-import logging
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -9,13 +8,15 @@ from redis.asyncio import Redis
 
 from app.core.config import settings
 from app.core.exceptions import IdempotencyConflictError
+from app.core.logging import get_logger
+from app.core.metrics import metrics
 
 if TYPE_CHECKING:
     RedisClient = Redis[str]
 else:
     RedisClient = Redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class IdempotencyService:
@@ -52,19 +53,23 @@ class IdempotencyService:
         redis_key = self._format_key(api_key_id, idempotency_key)
 
         existing = await self.redis.get(redis_key)
+        metrics.record_redis_op("idempotency_get", "success")
         if existing:
             try:
                 data = json.loads(existing)
                 status = data.get("status")
                 if status == "processing":
+                    metrics.record_idempotency_conflict()
+                    logger.warning("idempotency_in_flight_conflict")
                     raise IdempotencyConflictError(
                         "A request with this Idempotency-Key is currently in progress."
                     )
                 if status == "completed":
-                    logger.info("Idempotency cache hit for key %s", idempotency_key)
+                    metrics.record_idempotency_hit()
+                    logger.info("idempotency_cached_response_hit")
                     return data.get("response")  # type: ignore[no-any-return]
             except json.JSONDecodeError:
-                logger.warning("Corrupted idempotency entry found for %s; clearing.", redis_key)
+                logger.warning("idempotency_corrupted_payload_cleared")
                 await self.redis.delete(redis_key)
 
         # Attempt atomic lock acquisition (NX = set only if not exists)
@@ -75,7 +80,10 @@ class IdempotencyService:
             nx=True,
             ex=self.lock_timeout,
         )
+        metrics.record_redis_op("idempotency_set_lock", "success")
         if not acquired:
+            metrics.record_idempotency_conflict()
+            logger.warning("idempotency_lock_acquisition_conflict")
             raise IdempotencyConflictError(
                 "A request with this Idempotency-Key is currently in progress."
             )
@@ -92,6 +100,7 @@ class IdempotencyService:
         redis_key = self._format_key(api_key_id, idempotency_key)
         payload = json.dumps({"status": "completed", "response": response})
         await self.redis.set(redis_key, payload, ex=self.ttl_seconds)
+        metrics.record_redis_op("idempotency_store_response", "success")
 
     async def release_lock(
         self,

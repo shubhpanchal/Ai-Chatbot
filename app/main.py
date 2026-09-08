@@ -10,15 +10,26 @@ from fastapi.responses import JSONResponse
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.core.logging import configure_logging, get_logger
 from app.middleware.error_handler import register_error_handlers
+from app.middleware.request_logging import RequestLoggingMiddleware
+
+# Initialize structured logging configuration
+configure_logging()
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan context manager for startup and shutdown hooks."""
-    # Startup actions (e.g. logging startup)
+    logger.info(
+        "application_startup",
+        app_name=settings.app_name,
+        env=settings.app_env,
+        version="0.1.0",
+    )
     yield
-    # Shutdown actions (e.g. closing connections)
+    logger.info("application_shutdown", app_name=settings.app_name)
 
 
 def create_application() -> FastAPI:
@@ -33,7 +44,10 @@ def create_application() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS configuration
+    # 1. Request logging & correlation middleware (outermost application layer)
+    app.add_middleware(RequestLoggingMiddleware)
+
+    # 2. CORS configuration
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -42,13 +56,13 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Centralized exception handlers
+    # 3. Centralized exception handlers
     register_error_handlers(app)
 
-    # Root-level health probe for direct container orchestration checks
+    # 4. Root-level health & readiness probes (/health, /ready, /metrics)
     app.include_router(health_router)
 
-    # Versioned API routes (/api/v1/...)
+    # 5. Versioned API routes (/api/v1/...)
     app.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 
     @app.get("/", include_in_schema=False)
@@ -61,6 +75,8 @@ def create_application() -> FastAPI:
                 "version": "0.1.0",
                 "docs": "/docs",
                 "health": "/health",
+                "ready": "/ready",
+                "metrics": "/metrics",
             }
         )
 

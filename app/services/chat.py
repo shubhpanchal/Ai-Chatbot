@@ -18,6 +18,8 @@ from app.core.exceptions import (
     LLMTimeoutError,
     ValidationError,
 )
+from app.core.logging import get_logger
+from app.core.metrics import metrics
 from app.core.retry import with_retry
 from app.llm.base import LLMMessage, LLMProvider
 from app.llm.context import ContextManager
@@ -33,6 +35,8 @@ from app.schemas.message import (
 )
 from app.services.cost import CostCalculatorService
 from app.services.idempotency import IdempotencyService
+
+logger = get_logger(__name__)
 
 
 class ChatService:
@@ -75,6 +79,11 @@ class ChatService:
                 idempotency_key=idempotency_key,
             )
             if cached is not None:
+                metrics.record_idempotency_hit()
+                logger.info(
+                    "idempotency_cache_hit",
+                    conversation_id=str(conversation_id),
+                )
                 return MessageResponse.model_validate(cached)
 
         # 2. Check conversation existence and tenant ownership
@@ -104,6 +113,13 @@ class ChatService:
         )
 
         start_time = time.perf_counter()
+        model_name = getattr(self.llm_provider, "default_model", settings.openai_model)
+        logger.info(
+            "llm_generation_started",
+            conversation_id=str(conversation_id),
+            context_messages_count=len(context_messages),
+            model=model_name,
+        )
 
         # 5. Invoke LLM provider with transient retry handling
         try:
@@ -114,11 +130,26 @@ class ChatService:
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
-            # Record failed LLM request audit log
+            # Record failed LLM request audit log and metric
+            metrics.record_llm_request(
+                provider=settings.llm_provider,
+                model=model_name,
+                status="error",
+                duration_ms=elapsed_ms,
+            )
+            logger.error(
+                "llm_generation_failed",
+                conversation_id=str(conversation_id),
+                model=model_name,
+                latency_ms=elapsed_ms,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
+
             await self.llm_request_repo.create(
                 conversation_id=conversation_id,
                 message_id=None,
-                model=getattr(self.llm_provider, "default_model", settings.openai_model),
+                model=model_name,
                 prompt_tokens=0,
                 completion_tokens=0,
                 total_tokens=0,
@@ -152,11 +183,41 @@ class ChatService:
             content=llm_response.content,
         )
 
-        # 7. Calculate cost and record successful LLM audit log
+        # 7. Calculate cost and record successful LLM audit log and metrics
         cost = self.cost_calculator.calculate_cost(
             model=llm_response.model,
             prompt_tokens=llm_response.prompt_tokens,
             completion_tokens=llm_response.completion_tokens,
+        )
+
+        metrics.record_llm_request(
+            provider=settings.llm_provider,
+            model=llm_response.model,
+            status="success",
+            duration_ms=llm_response.latency_ms,
+        )
+        metrics.record_tokens(
+            provider=settings.llm_provider,
+            model=llm_response.model,
+            prompt_tokens=llm_response.prompt_tokens,
+            completion_tokens=llm_response.completion_tokens,
+        )
+        metrics.record_cost(
+            provider=settings.llm_provider,
+            model=llm_response.model,
+            cost_usd=float(cost),
+        )
+        metrics.record_conversation_op("send_message")
+
+        logger.info(
+            "llm_generation_completed",
+            conversation_id=str(conversation_id),
+            model=llm_response.model,
+            prompt_tokens=llm_response.prompt_tokens,
+            completion_tokens=llm_response.completion_tokens,
+            total_tokens=llm_response.total_tokens,
+            latency_ms=llm_response.latency_ms,
+            estimated_cost_usd=float(cost),
         )
 
         await self.llm_request_repo.create(
@@ -260,6 +321,8 @@ class ChatService:
         """Stream assistant tokens as SSE events with disconnect cancellation and post-stream persistence."""
         # 1. Idempotency replay branch: stream cached assistant turn
         if cached_response is not None:
+            metrics.record_idempotency_hit()
+            logger.info("idempotency_cache_hit_streaming", conversation_id=str(conversation_id))
             cached_content = str(cached_response.get("content", ""))
             token_event = StreamTokenEvent(token=cached_content, index=0)
             yield f"event: token\ndata: {token_event.model_dump_json()}\n\n"
@@ -284,6 +347,7 @@ class ChatService:
         total_tokens: int | None = None
         finish_reason = "stop"
         model_name = getattr(self.llm_provider, "default_model", settings.openai_model)
+        logger.info("llm_stream_started", conversation_id=str(conversation_id), model=model_name)
         stream_iter = self.llm_provider.generate_stream(messages=context_messages)
         cancelled = False
 
@@ -297,6 +361,17 @@ class ChatService:
                 if chunk.delta:
                     if ttft_ms is None:
                         ttft_ms = int((time.perf_counter() - start_time) * 1000)
+                        metrics.record_stream_ttft(
+                            provider=settings.llm_provider,
+                            model=model_name,
+                            ttft_ms=float(ttft_ms),
+                        )
+                        logger.info(
+                            "llm_stream_first_token",
+                            conversation_id=str(conversation_id),
+                            ttft_ms=ttft_ms,
+                            model=model_name,
+                        )
                     accumulated_tokens.append(chunk.delta)
                     token_event = StreamTokenEvent(token=chunk.delta, index=chunk.index)
                     yield f"event: token\ndata: {token_event.model_dump_json()}\n\n"
@@ -314,6 +389,21 @@ class ChatService:
 
             # 3. Handle client disconnection mid-stream
             if cancelled:
+                metrics.record_streaming_cancellation()
+                metrics.record_llm_request(
+                    provider=settings.llm_provider,
+                    model=model_name,
+                    status="cancelled",
+                    duration_ms=elapsed_ms,
+                )
+                logger.warning(
+                    "llm_stream_client_disconnected",
+                    conversation_id=str(conversation_id),
+                    latency_ms=elapsed_ms,
+                    tokens_streamed=len(accumulated_tokens),
+                    model=model_name,
+                )
+
                 calc_prompt_tokens = (
                     prompt_tokens if prompt_tokens is not None else len(context_messages) * 10
                 )
@@ -372,6 +462,34 @@ class ChatService:
                 completion_tokens=calc_comp_tokens,
             )
 
+            metrics.record_llm_request(
+                provider=settings.llm_provider,
+                model=model_name,
+                status="success",
+                duration_ms=elapsed_ms,
+            )
+            metrics.record_tokens(
+                provider=settings.llm_provider,
+                model=model_name,
+                prompt_tokens=calc_prompt_tokens,
+                completion_tokens=calc_comp_tokens,
+            )
+            metrics.record_cost(
+                provider=settings.llm_provider,
+                model=model_name,
+                cost_usd=float(cost),
+            )
+            metrics.record_conversation_op("stream_message")
+
+            logger.info(
+                "llm_stream_completed",
+                conversation_id=str(conversation_id),
+                model=model_name,
+                total_tokens=calc_total_tokens,
+                latency_ms=elapsed_ms,
+                estimated_cost_usd=float(cost),
+            )
+
             # Record success audit log with latency and cost
             await self.llm_request_repo.create(
                 conversation_id=conversation_id,
@@ -419,6 +537,21 @@ class ChatService:
 
         except Exception as exc:
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+
+            metrics.record_llm_request(
+                provider=settings.llm_provider,
+                model=model_name,
+                status="error",
+                duration_ms=elapsed_ms,
+            )
+            logger.error(
+                "llm_stream_error",
+                conversation_id=str(conversation_id),
+                model=model_name,
+                latency_ms=elapsed_ms,
+                error_type=type(exc).__name__,
+                error_message=str(exc),
+            )
 
             # Record error audit log without saving assistant message
             await self.llm_request_repo.create(
