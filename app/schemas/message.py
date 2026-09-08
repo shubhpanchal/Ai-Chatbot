@@ -49,3 +49,19 @@ class MessageResponse(BaseModel):
         default=None,
         description="Token accounting and cost metrics (included on generation responses).",
     )
+
+
+class StreamTokenEvent(BaseModel):
+    """Schema for incremental token SSE events."""
+
+    token: str = Field(..., description="Incremental token text.")
+    index: int = Field(..., description="Zero-based token sequence index.")
+
+
+class StreamDoneEvent(BaseModel):
+    """Schema for final completion SSE event."""
+
+    message_id: uuid.UUID = Field(..., description="Persisted assistant message ID.")
+    total_tokens: int = Field(..., description="Total tokens consumed in this turn.")
+    estimated_cost_usd: float = Field(..., description="Estimated cost of this turn in USD.")
+    finish_reason: str = Field(default="stop", description="Model completion reason.")
