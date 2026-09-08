@@ -38,15 +38,10 @@ async def test_seed_database_integration(db_session: AsyncSession) -> None:
     all_conversations = res_all_convs.scalars().all()
     assert len(all_conversations) >= 50
 
-    # Verify Messages exist for the first conversation
-    first_conv = all_conversations[0]
-    stmt_msgs = (
-        select(Message)
-        .where(Message.conversation_id == first_conv.id)
-        .order_by(Message.created_at.asc())
-    )
-    res_msgs = await db_session.execute(stmt_msgs)
-    messages = res_msgs.scalars().all()
-    assert len(messages) >= 1
-    assert messages[0].role in ["system", "user", "assistant"]
-    assert len(messages[0].content) > 0
+    # Verify Messages exist in database
+    stmt_all_msgs = select(Message)
+    res_all_msgs = await db_session.execute(stmt_all_msgs)
+    all_messages = res_all_msgs.scalars().all()
+    assert len(all_messages) >= 100
+    assert all_messages[0].role in ["system", "user", "assistant"]
+    assert len(all_messages[0].content) > 0

@@ -54,7 +54,7 @@ select = [
     "C4",  # flake8-comprehensions
     "SIM", # flake8-simplify
 ]
-ignore = ["E501"] # line length handled by formatter
+ignore = ["E501", "B008"] # line length handled by formatter, B008 allowed for FastAPI Depends
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
