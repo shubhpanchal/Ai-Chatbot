@@ -4,7 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_conversation_service, get_current_api_key
+from app.api.deps import check_rate_limit, get_conversation_service, get_current_api_key
 from app.models.api_key import APIKey
 from app.schemas.conversation import (
     ConversationCreate,
@@ -14,7 +14,11 @@ from app.schemas.conversation import (
 )
 from app.services.conversation import ConversationService
 
-router = APIRouter(prefix="/conversations", tags=["Conversations"])
+router = APIRouter(
+    prefix="/conversations",
+    tags=["Conversations"],
+    dependencies=[Depends(check_rate_limit)],
+)
 
 
 @router.post(

@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     # -------------------------------------------------------------------------
     rate_limit_requests: int = Field(default=100, alias="RATE_LIMIT_REQUESTS")
     rate_limit_window_seconds: int = Field(default=60, alias="RATE_LIMIT_WINDOW_SECONDS")
+    rate_limit_fail_open: bool = Field(default=False, alias="RATE_LIMIT_FAIL_OPEN")
     idempotency_ttl_seconds: int = Field(default=86400, alias="IDEMPOTENCY_TTL_SECONDS")
     idempotency_lock_timeout_seconds: int = Field(
         default=60, alias="IDEMPOTENCY_LOCK_TIMEOUT_SECONDS"
