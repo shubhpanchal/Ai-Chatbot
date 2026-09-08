@@ -1,0 +1,38 @@
+# Git & Documentation
+.git
+.github
+docs
+
+# Python / Virtual Environment
+__pycache__
+*.py[cod]
+*$py.class
+.venv
+venv
+ENV
+env
+
+# Tests & Caches
+tests
+evaluation
+data/seed
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Local Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+
+# Misc
+*.md
+!README.md
