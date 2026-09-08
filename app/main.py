@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1.health import router as health_router
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.middleware.error_handler import register_error_handlers
 
 
 @asynccontextmanager
@@ -40,6 +41,9 @@ def create_application() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Centralized exception handlers
+    register_error_handlers(app)
 
     # Root-level health probe for direct container orchestration checks
     app.include_router(health_router)
