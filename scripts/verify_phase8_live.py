@@ -150,7 +150,7 @@ async def main() -> None:
         print(f"   - LLM TTFT Summaries: {snapshot['llm']['ttft']}")
         print(f"   - Application Ops: {snapshot['application']}")
 
-    await redis_client.aclose()
+    await redis_client.close()
     await engine.dispose()
     print("=== ALL PHASE 8 STRUCTURED LOGGING, METRICS & PROBES LIVE CHECKS PASSED ===")
 

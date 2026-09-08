@@ -11,6 +11,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.db.session import dispose_engine
 from app.middleware.error_handler import register_error_handlers
 from app.middleware.request_logging import RequestLoggingMiddleware
 
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     yield
     logger.info("application_shutdown", app_name=settings.app_name)
+    await dispose_engine()
 
 
 def create_application() -> FastAPI:
@@ -50,7 +52,7 @@ def create_application() -> FastAPI:
     # 2. CORS configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_allow_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

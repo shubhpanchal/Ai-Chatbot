@@ -166,6 +166,7 @@ class ChatService:
             if isinstance(
                 exc,
                 (
+                    LLMTimeoutError,
                     TimeoutError,
                     asyncio.TimeoutError,
                     openai.APITimeoutError,
@@ -173,6 +174,9 @@ class ChatService:
                 ),
             ):
                 raise LLMTimeoutError("Upstream LLM provider request timed out.") from exc
+
+            if isinstance(exc, LLMProviderError):
+                raise exc
 
             raise LLMProviderError(f"Upstream LLM provider error: {str(exc)}") from exc
 
